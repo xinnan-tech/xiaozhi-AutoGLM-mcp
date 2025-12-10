@@ -1,0 +1,10 @@
+# 小智mcp项目基础依赖
+websockets>=15.0.1
+mcp>=1.20.0
+pydantic>=2.12.3
+mcp-proxy>=0.10.0
+fastmcp>=2.13.0.2
+PyYAML>=6.0
+# auto-glm 项目依赖
+Pillow>=12.0.0
+openai>=2.9.0

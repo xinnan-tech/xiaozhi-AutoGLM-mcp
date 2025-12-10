@@ -1,0 +1,20 @@
+# 请替换为你的MCP_ENDPOINT
+mcp_endpoint: 你的MCP_ENDPOINT
+selected_module:
+  # 视觉语言大模型
+  VLLM: QwenVLVLLM
+
+VLLM:
+  QwenVLVLLM:
+    type: openai
+    # qwen3-max是阿里云的多模态视觉语言大模型
+    model_name: qwen3-max
+    url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    # 可在这里找到你的api key https://bailian.console.aliyun.com/?apiKey=1#/api-key
+    api_key: 你的api_key
+  ChatGLMVLLM:
+    type: openai
+    model_name: glm-4.6v
+    url: https://open.bigmodel.cn/api/paas/v4/
+    # 可在这里找到你的api key https://bigmodel.cn/usercenter/proj-mgmt/apikeys
+    api_key: 你的api_key

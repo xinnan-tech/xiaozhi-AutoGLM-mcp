@@ -12,6 +12,13 @@ VLLM:
     url: https://dashscope.aliyuncs.com/compatible-mode/v1
     # 可在这里找到你的api key https://bailian.console.aliyun.com/?apiKey=1#/api-key
     api_key: 你的api_key
+  OpenRouterVLLM:
+    type: openai
+    # qwen3-max是阿里云的多模态视觉语言大模型
+    model_name: google/gemini-3-pro-preview
+    url: https://openrouter.ai/api/v1
+    # 可在这里找到你的api key https://openrouter.ai/settings/keys
+    api_key: 你的api_key
   ChatGLMVLLM:
     type: openai
     model_name: glm-4.6v

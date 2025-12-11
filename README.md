@@ -71,11 +71,11 @@ adb devices
 
 3.3 编辑 `.config.yaml` 文件，将获取到的MCP接入点地址替换到 `mcp_endpoint` 字段中。
 
-3.4 如果你的 `.config.yaml`选择了 `QwenVLVLLM` 作为视觉语言大模型，那么请前往`阿里百炼`平台，获取你的密钥。请主要账户余额充足，否则会导致调用失败。
+3.4 如果你的 `.config.yaml`选择了 `ChatGLMVLLM` 作为视觉语言大模型，那么请前往[智谱AI](https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys)平台，获取你的密钥。请主要账户余额充足，否则会导致调用失败。
 
-3.5 编辑 `.config.yaml` 文件，将获取到的密钥替换到 `VLLM`下的 `QwenVLVLLM`下的 `api_key` 字段中。
+3.5 编辑 `.config.yaml` 文件，将获取到的密钥替换到 `VLLM`下的 `ChatGLMVLLM`下的 `api_key` 字段中。
 
-### 5. 运行服务
+### 4. 运行服务
 #### Linux/macOS:
 
 ```bash

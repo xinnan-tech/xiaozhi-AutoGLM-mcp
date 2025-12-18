@@ -85,5 +85,5 @@ adb devices
 #### Windows:
 
 ```batch
-start_mcp_service.bat
+python mcp_pipe.py mobile_agent_server.py
 ```

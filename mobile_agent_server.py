@@ -24,10 +24,63 @@ from fastmcp import FastMCP
 import math
 import random
 
+# CRITICAL: Save original stdout for MCP protocol, then redirect print() to stderr
+# This must be done BEFORE importing phone_agent to intercept all print() calls
+_original_stdout = sys.stdout
+_original_stderr = sys.stderr
+
+class PrintToStderr:
+    """Intercept print() calls and redirect to stderr, but preserve original stdout for MCP"""
+    def __init__(self, original_stdout):
+        self._original_stdout = original_stdout
+        self._in_mcp_write = False
+
+    def write(self, text):
+        # Check if this is a JSON-RPC message (starts with '{' or is part of MCP protocol)
+        # These should go to original stdout
+        stripped = text.strip()
+        if stripped.startswith('{') or stripped.startswith('Content-Length:'):
+            return self._original_stdout.write(text)
+        else:
+            # All other output (print statements) go to stderr
+            return _original_stderr.write(text)
+
+    def flush(self):
+        self._original_stdout.flush()
+        _original_stderr.flush()
+
+    def isatty(self):
+        return self._original_stdout.isatty()
+
+    @property
+    def buffer(self):
+        """Expose the underlying buffer for fastmcp"""
+        return self._original_stdout.buffer
+
+    @property
+    def encoding(self):
+        """Expose encoding for compatibility"""
+        return getattr(self._original_stdout, 'encoding', 'utf-8')
+
+    @property
+    def errors(self):
+        """Expose error handling mode"""
+        return getattr(self._original_stdout, 'errors', 'strict')
+
+# Replace stdout with smart redirector
+sys.stdout = PrintToStderr(_original_stdout)
+
 from phone_agent import PhoneAgent
 from phone_agent.agent import AgentConfig
 from phone_agent.model import ModelConfig
 
+# Configure logging to output to stderr (not stdout, which is piped to WebSocket)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=_original_stderr,  # Output to stderr so logs appear in console
+    force=True,  # Override any existing config
+)
 logger = logging.getLogger("MobileAgentMCP")
 
 
@@ -198,7 +251,7 @@ def initialize_agent(model_config_dict: Dict[str, Any]) -> PhoneAgent:
     )
 
     agent_config = AgentConfig(
-        max_steps=100, device_id=None, lang="cn", verbose=True  # Auto-detect
+        max_steps=100, device_id=None, lang="cn", verbose=False  # Disable verbose to prevent stdout pollution
     )
 
     return PhoneAgent(model_config=model_config, agent_config=agent_config)

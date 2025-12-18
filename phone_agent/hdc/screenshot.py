@@ -1,4 +1,4 @@
-"""Screenshot utilities for capturing Android device screen."""
+"""Screenshot utilities for capturing HarmonyOS device screen."""
 
 import base64
 import os
@@ -10,6 +10,7 @@ from io import BytesIO
 from typing import Tuple
 
 from PIL import Image
+from phone_agent.hdc.connection import _run_hdc_command
 
 
 @dataclass
@@ -24,10 +25,10 @@ class Screenshot:
 
 def get_screenshot(device_id: str | None = None, timeout: int = 10) -> Screenshot:
     """
-    Capture a screenshot from the connected Android device.
+    Capture a screenshot from the connected HarmonyOS device.
 
     Args:
-        device_id: Optional ADB device ID for multi-device setups.
+        device_id: Optional HDC device ID for multi-device setups.
         timeout: Timeout in seconds for screenshot operations.
 
     Returns:
@@ -38,12 +39,16 @@ def get_screenshot(device_id: str | None = None, timeout: int = 10) -> Screensho
         a black fallback image is returned with is_sensitive=True.
     """
     temp_path = os.path.join(tempfile.gettempdir(), f"screenshot_{uuid.uuid4()}.png")
-    adb_prefix = _get_adb_prefix(device_id)
+    hdc_prefix = _get_hdc_prefix(device_id)
 
     try:
         # Execute screenshot command
-        result = subprocess.run(
-            adb_prefix + ["shell", "screencap", "-p", "/sdcard/tmp.png"],
+        # HarmonyOS HDC only supports JPEG format
+        remote_path = "/data/local/tmp/tmp_screenshot.jpeg"
+
+        # Try method 1: hdc shell screenshot (newer HarmonyOS versions)
+        result = _run_hdc_command(
+            hdc_prefix + ["shell", "screenshot", remote_path],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -51,12 +56,22 @@ def get_screenshot(device_id: str | None = None, timeout: int = 10) -> Screensho
 
         # Check for screenshot failure (sensitive screen)
         output = result.stdout + result.stderr
-        if "Status: -1" in output or "Failed" in output:
-            return _create_fallback_screenshot(is_sensitive=True)
+        if "fail" in output.lower() or "error" in output.lower() or "not found" in output.lower():
+            # Try method 2: snapshot_display (older versions or different devices)
+            result = _run_hdc_command(
+                hdc_prefix + ["shell", "snapshot_display", "-f", remote_path],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            output = result.stdout + result.stderr
+            if "fail" in output.lower() or "error" in output.lower():
+                return _create_fallback_screenshot(is_sensitive=True)
 
         # Pull screenshot to local temp path
-        subprocess.run(
-            adb_prefix + ["pull", "/sdcard/tmp.png", temp_path],
+        # Note: remote file is JPEG, but PIL can open it regardless of local extension
+        _run_hdc_command(
+            hdc_prefix + ["file", "recv", remote_path, temp_path],
             capture_output=True,
             text=True,
             timeout=5,
@@ -65,7 +80,8 @@ def get_screenshot(device_id: str | None = None, timeout: int = 10) -> Screensho
         if not os.path.exists(temp_path):
             return _create_fallback_screenshot(is_sensitive=False)
 
-        # Read and encode image
+        # Read JPEG image and convert to PNG for model inference
+        # PIL automatically detects the image format from file content
         img = Image.open(temp_path)
         width, height = img.size
 
@@ -85,11 +101,11 @@ def get_screenshot(device_id: str | None = None, timeout: int = 10) -> Screensho
         return _create_fallback_screenshot(is_sensitive=False)
 
 
-def _get_adb_prefix(device_id: str | None) -> list:
-    """Get ADB command prefix with optional device specifier."""
+def _get_hdc_prefix(device_id: str | None) -> list:
+    """Get HDC command prefix with optional device specifier."""
     if device_id:
-        return ["adb", "-s", device_id]
-    return ["adb"]
+        return ["hdc", "-t", device_id]
+    return ["hdc"]
 
 
 def _create_fallback_screenshot(is_sensitive: bool) -> Screenshot:

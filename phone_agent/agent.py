@@ -7,8 +7,8 @@ from typing import Any, Callable
 
 from phone_agent.actions import ActionHandler
 from phone_agent.actions.handler import do, finish, parse_action
-from phone_agent.adb import get_current_app, get_screenshot
 from phone_agent.config import get_messages, get_system_prompt
+from phone_agent.device_factory import get_device_factory
 from phone_agent.model import ModelClient, ModelConfig
 from phone_agent.model.client import MessageBuilder
 
@@ -140,8 +140,9 @@ class PhoneAgent:
         self._step_count += 1
 
         # Capture current screen state
-        screenshot = get_screenshot(self.agent_config.device_id)
-        current_app = get_current_app(self.agent_config.device_id)
+        device_factory = get_device_factory()
+        screenshot = device_factory.get_screenshot(self.agent_config.device_id)
+        current_app = device_factory.get_current_app(self.agent_config.device_id)
 
         # Build messages
         if is_first:
@@ -169,6 +170,10 @@ class PhoneAgent:
 
         # Get model response
         try:
+            msgs = get_messages(self.agent_config.lang)
+            print("\n" + "=" * 50)
+            print(f"💭 {msgs['thinking']}:")
+            print("-" * 50)
             response = self.model_client.request(self._context)
         except Exception as e:
             if self.agent_config.verbose:
@@ -191,16 +196,10 @@ class PhoneAgent:
 
         if self.agent_config.verbose:
             # Print thinking process
-            import sys
-            msgs = get_messages(self.agent_config.lang)
-            print("\n" + "=" * 50, file=sys.stderr)
-            print(f"💭 {msgs['thinking']}:", file=sys.stderr)
-            print("-" * 50, file=sys.stderr)
-            print(response.thinking, file=sys.stderr)
-            print("-" * 50, file=sys.stderr)
-            print(f"🎯 {msgs['action']}:", file=sys.stderr)
-            print(json.dumps(action, ensure_ascii=False, indent=2), file=sys.stderr)
-            print("=" * 50 + "\n", file=sys.stderr)
+            print("-" * 50)
+            print(f"🎯 {msgs['action']}:")
+            print(json.dumps(action, ensure_ascii=False, indent=2))
+            print("=" * 50 + "\n")
 
         # Remove image from context to save space
         self._context[-1] = MessageBuilder.remove_images_from_message(self._context[-1])
@@ -228,14 +227,12 @@ class PhoneAgent:
         finished = action.get("_metadata") == "finish" or result.should_finish
 
         if finished and self.agent_config.verbose:
-            import sys
             msgs = get_messages(self.agent_config.lang)
-            print("\n" + "🎉 " + "=" * 48, file=sys.stderr)
+            print("\n" + "🎉 " + "=" * 48)
             print(
-                f"✅ {msgs['task_completed']}: {result.message or action.get('message', msgs['done'])}",
-                file=sys.stderr
+                f"✅ {msgs['task_completed']}: {result.message or action.get('message', msgs['done'])}"
             )
-            print("=" * 50 + "\n", file=sys.stderr)
+            print("=" * 50 + "\n")
 
         return StepResult(
             success=result.success,
